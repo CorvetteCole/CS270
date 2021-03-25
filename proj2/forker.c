@@ -17,7 +17,7 @@ void goAway(char myName) {
     exit(1);
 }
 
-void exitStatus(char myName, char targetName, int status) {
+void printExitStatus(char myName, char targetName, int status) {
     printf("Process %c here: Process %c exited with status %#04x\n", myName, targetName, status);
 }
 
@@ -37,7 +37,7 @@ void spawnD(char myName){
     } else {
         int childStatusD;
         if (waitpid(forkValueD, &childStatusD, 0) != -1) {
-            exitStatus(myName, 'D', childStatusD);
+            printExitStatus(myName, 'D', childStatusD);
         } else {
             dieWithError();
         }
@@ -59,7 +59,7 @@ void branch(char myName, int controlValue, pid_t originalPID) {
             }
             int childStatus;
             if (waitpid(forkValue, &childStatus, 0) != -1) {
-                exitStatus(myName, myName + 1, childStatus);
+                printExitStatus(myName, myName + 1, childStatus);
                 goAway(myName);
             } else {
                 dieWithError();

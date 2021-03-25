@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <wait.h>
-#include <errno.h>
 
 typedef void (*sighandler_t)(int);
 
@@ -14,8 +13,6 @@ volatile sig_atomic_t pidC = -1;
 volatile sig_atomic_t pidD = -1;
 
 extern void dieWithError();
-
-void setupSignals();
 
 void greet(char myName) {
     printf("Process %c, PID %d greets you.\n", myName, getpid());
@@ -28,7 +25,7 @@ void goAway(char myName) {
     exit(1);
 }
 
-void exitStatus(char myName, char targetName, int status) {
+void printExitStatus(char myName, char targetName, int status) {
     printf("Process %c here: Process %c exited with status %#04x\n", myName, targetName, status);
 }
 
@@ -47,15 +44,13 @@ void siguser2_handler(int signum) {
     sigD = 1;
 }
 
-// special handlers that forward signals to a pid set by flag
+// special handlers that forward signals to a pid set by flag, otherwise to the existing handlers
 void siguser1_handler_fwd(int signum) {
-
     if (pidD == -1) {
         siguser1_handler(signum);
     } else {
         kill(pidD, SIGUSR1);
     }
-
 }
 
 void siguser2_handler_fwd(int signum) {
@@ -75,6 +70,11 @@ sighandler_t setSignalHandler(int signum, sighandler_t sighandler) {
         dieWithError("Signal error");
     }
     return (old_action.sa_handler);
+}
+
+void setupSignals() {
+    setSignalHandler(SIGUSR1, siguser1_handler);
+    setSignalHandler(SIGUSR2, siguser2_handler);
 }
 
 void waitForSignal(int checkC){
@@ -99,8 +99,6 @@ void waitForSignal(int checkC){
     }
     /* condition is nonzero – restore original signal mask */
     if (sigprocmask(SIG_SETMASK, &oldMask, NULL) < 0) { dieWithError(); }
-
-
 }
 
 void spawnD(char myName, int forkValueB) {
@@ -109,41 +107,36 @@ void spawnD(char myName, int forkValueB) {
         setupSignals();
         myName = 'D';
 
-        //waitForSignal(1);
+        //
         // wait for signal that C has greeted
-        while (sigC == 0) {
-            pause();
-        }
-        sigC = 0; // reset sigC
+        waitForSignal(1);
         greet(myName);
 
         // send signal that D has greeted
         kill(getppid(), SIGUSR2);
 
         // wait for signal that C has exited
-        while (sigC == 0) {
-            pause();
-        }
-        sigC = 0; // reset sigC
+        waitForSignal(1);
         goAway(myName);
     } else {
+        // this is the last part that runs on the original process until waiting,
+        // so we set up our signal forwarding here.
+
+        // calculate PID value of C
         int forkValueC = forkValueB + 1 == forkValueD ? forkValueB + 2 : forkValueB + 1;
         pidC = forkValueC;
-
-
+        // setup signal forwarding handlers
         setSignalHandler(SIGUSR1, siguser1_handler_fwd);
         setSignalHandler(SIGUSR2, siguser2_handler_fwd);
-
-        while (sigC == 0) {
-            pause();
-        }
+        // wait for initial signal from C and then handshake to confirm readiness
+        waitForSignal(1);
         pidD = forkValueD;
         kill(forkValueC, SIGUSR2);
-        sigC = 0;
 
+        // handle exit (normal stuff)
         int childStatusD;
         if (waitpid(forkValueD, &childStatusD, 0) != -1) {
-            exitStatus(myName, 'D', childStatusD);
+            printExitStatus(myName, 'D', childStatusD);
         } else {
             dieWithError();
         }
@@ -157,9 +150,9 @@ void branch(char myName, int controlValue, pid_t originalPID) {
             myName++;
             controlValue--;
             greet(myName);
-            if (controlValue == 0) {
+            if (controlValue == 0) { // do some special things if this is the last branch set by controlValue
                 setupSignals();
-                // continually send signal to parent until a similar one is received, indicating readiness
+                // continually send signal to parent until the handshake is complete, indicating readiness
                 while (sigD == 0) {
                     kill(originalPID, SIGUSR1);
                     sleep(1);
@@ -170,24 +163,24 @@ void branch(char myName, int controlValue, pid_t originalPID) {
                 kill(originalPID, SIGUSR1);
 
                 // wait for signal that D has greeted
-                while (sigD == 0) {
-                    pause();
-                }
-                sigD = 0; // reset sigD
+                waitForSignal(0);
 
                 // send signal, C has exited
                 kill(originalPID, SIGUSR1);
             } else {
+                // continue branching until our controlValue is completely depleted
                 branch(myName, controlValue, originalPID);
             }
             goAway(myName);
         } else {
             if (getpid() == originalPID) {
+                // spawn the special D branch after the B branch. Not an elegant solution but I didn't have time
+                // to make a one size fits all solution
                 spawnD(myName, forkValue);
             }
             int childStatus;
             if (waitpid(forkValue, &childStatus, 0) != -1) {
-                exitStatus(myName, myName + 1, childStatus);
+                printExitStatus(myName, myName + 1, childStatus);
                 goAway(myName);
             } else {
                 dieWithError();
@@ -197,15 +190,7 @@ void branch(char myName, int controlValue, pid_t originalPID) {
     }
 }
 
-void setupSignals() {
-    setSignalHandler(SIGUSR1, siguser1_handler);
-    setSignalHandler(SIGUSR2, siguser2_handler);
-}
-
-
 int main() {
-
-
     char myName = 'A';
     int controlValue = 2;
     pid_t originalPID = getpid();
@@ -213,6 +198,5 @@ int main() {
     greet(myName);
     branch(myName, controlValue, originalPID);
     goAway(myName);
-
     return 0;
 }
