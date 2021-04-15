@@ -1,0 +1,42 @@
+Script started on 2021-03-25 03:08:30-04:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="80" LINES="24"]
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ make
+gcc -Og -o forker forker.c dieWithError.c
+gcc -Og -o sigs sigs.c dieWithError.c
+gcc -Og -o ipc ipc.c dieWithError.c
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ echo "Part [K[K[K[K[K[K"----- Part 1 -----"
+----- Part 1 -----
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ ./forker 
+Process A, PID 1741334 greets you.
+Process B, PID 1741335 greets you.
+Process D, PID 1741336 greets you.
+Process D exits normally
+Process C, PID 1741337 greets you.
+Process C exits normally
+Process A here: Process D exited with status 0x100
+Process B here: Process C exited with status 0x100
+Process B exits normally
+Process A here: Process B exited with status 0x100
+Process A exits normally
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ ech./forker echo "----- Part 1 -----"[1P -----"2 -----"
+----- Part 2 -----
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ ./sigs 
+.
+....................Child: finished sending SIGINT LIMIT times.
+....................sigalarm_count: 21, sigint_count: 20
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ ./sigs echo "----- Part 2 -----"[1P -----"3 -----"
+----- Part 3 -----
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ ./ipc 
+Process A, PID 1741378 greets you.
+Process B, PID 1741379 greets you.
+Process C, PID 1741381 greets you.
+Process D, PID 1741380 greets you.
+Process D exits normally
+Process A here: Process D exited with status 0x100
+Process C exits normally
+Process B here: Process C exited with status 0x100
+Process B exits normally
+Process A here: Process B exited with status 0x100
+Process A exits normally
+]0;cjge227@cjge227: ~/proj2[01;32mcjge227@cjge227[00m:[01;34m~/proj2[00m$ exit
+
+Script done on 2021-03-25 03:11:19-04:00 [COMMAND_EXIT_CODE="1"]
