@@ -2,13 +2,65 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include "UDPCookie.h"
 
+typedef void (*sighandler_t)(int);
+
+const int TIMEOUT = 3;
+const int MAGIC_NUM = 270;
+const int HEADER_SIZE = 12;
+
+int hasAlarm = 0;
+
+void sigalarm_handler(int signum) {
+    /* condition is 0 initially */
+    /* Signal handler will set condition to be 1 */
+    sigset_t unblock, blockAll, oldMask;
+    if (sigfillset(&blockAll) < 0) { dieWithError("All signal bits set"); }   /* all signal bits set */
+    if (sigemptyset(&unblock) < 0) { dieWithError("No signal bits set"); } /* no signal bits set */
+    if (sigprocmask(SIG_BLOCK, &blockAll, &oldMask) < 0) {/* block everything */
+        dieWithError("failed during block everything");
+    }
+    hasAlarm = 1;
+    /* condition is nonzero – restore original signal mask */
+    if (sigprocmask(SIG_SETMASK, &oldMask, NULL) < 0) { dieWithError("failed to restore mask"); }
+}
+
+sighandler_t setSignalHandler(int signum, sighandler_t sighandler) {
+    struct sigaction action, old_action;
+    action.sa_handler = sighandler;
+    sigemptyset(&action.sa_mask); /* Block sigs of type being handled */
+    action.sa_flags = SA_RESTART; /* Restart syscallsif possible */
+    if (sigaction(signum, &action, &old_action) < 0) {
+        dieWithError("Signal error");
+    }
+    return (old_action.sa_handler);
+}
+
+void printPacket(char msgBuffer[MAXMSGLEN]){
+    header_t *msgptr = (header_t *) msgBuffer;
+    printf("magic=%d\n", ntohs(msgptr->magic));
+    printf("length=%d\n", ntohs(msgptr->length));
+    printf("xid=%x\n", msgptr->xactionid);
+    printf("version=%d\n", ((msgptr->flags >> 4) & 0b1111));
+    printf("flags=%#x\n", msgptr->flags & 0b1111);
+    printf("result=%d\n", msgptr->result);
+    printf("port=%d\n", msgptr->port);
+    printf("variable part=");
+    for (int i = HEADER_SIZE; i < ntohs(msgptr->length); i++) {
+        printf("%c", msgBuffer[i]);
+    }
+    printf("\n");
+}
+
 int main(int argc, char *argv[]) {
     char msgBuf[MAXMSGLEN];
     int msgLen = 0; // quiet the compiler
+
+    setSignalHandler(SIGALRM, sigalarm_handler); // set the alarm signal handler
 
     if (argc != 3) // Test for correct number of arguments
         dieWithError("Parameter(sin_port): <Server Address/Name> <Server Port/Service>");
@@ -38,30 +90,41 @@ int main(int argc, char *argv[]) {
     if (sock < 0)
         dieWithSystemError("socket() failed");
 
-    // testing code
-    int sin_port;
-    struct sockaddr_in sockaddr;
-    int address_len = sizeof(sockaddr);
-    msgLen = 0;
 
-    getsockname(sin_port, &sockaddr, &address_len);
-    printf("sock: %d\n", sin_port);
+    char *messageText = "cjge227";
+    msgLen = HEADER_SIZE + strlen(messageText);
 
-    /* YOUR CODE HERE - construct Request message in msgBuf               */
-    /* msgLen must contain the size (in bytes) of the Request msg         */
+    header_t *msgptr = (header_t *) msgBuf;
+    msgptr->magic = htons(MAGIC_NUM);
+    msgptr->length = htons(msgLen);
+    msgptr->xactionid = 0x13377331;
+    msgptr->flags = 0b00100010;
+//    msgptr->flags = 0b00101010; // test flag set
+    msgptr->result = 0;
+    msgptr->port = 0;
+    strncpy(msgBuf + HEADER_SIZE, messageText, strlen(messageText));
 
 
-    ssize_t numBytes = sendto(sock, msgBuf, msgLen, 0, servAddr->ai_addr,
-                              servAddr->ai_addrlen);
-    if (numBytes < 0)
-        dieWithSystemError("sendto() failed");
-    else if (numBytes != msgLen)
-        dieWithError("sendto() returned unexpected number of bytes");
+    do {
+        if (hasAlarm) {
+            printf("response not received after %d seconds, retrying...\n", TIMEOUT);
+            hasAlarm = 0;
+        }
 
-    getsockname(sin_port, &sockaddr, &address_len);
-    printf("sock: %d\n", sin_port);
+        ssize_t numBytes = sendto(sock, msgBuf, msgLen, msgptr->flags, servAddr->ai_addr,
+                                  servAddr->ai_addrlen);
+        if (numBytes < 0)
+            dieWithSystemError("sendto() failed");
+        else if (numBytes != msgLen)
+            dieWithError("sendto() returned unexpected number of bytes");
 
-    /* YOUR CODE HERE - receive, parse and display response message */
+        alarm(TIMEOUT);
+        siginterrupt(SIGALRM, 1);
+        ssize_t numBytesRcvd = recvfrom(sock, msgBuf, MAXMSGLEN, 0, servAddr->ai_addr, &servAddr->ai_addrlen);
+    } while (hasAlarm != 0);
+
+    // after we know we have a packet, print that.
+    printPacket(msgBuf);
 
     freeaddrinfo(servAddr);
 
