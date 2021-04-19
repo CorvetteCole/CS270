@@ -1,0 +1,43 @@
+Script started on 2021-04-19 16:05:00-04:00 [TERM="xterm-256color" TTY="/dev/pts/8" COLUMNS="80" LINES="24"]
+]0;coleg@cole-pc:~/Documents/git/CS270/proj3[?2004h[01;32m[coleg@cole-pc[01;37m proj3[01;32m]$[00m exitmake all[4Pexit./server 31416
+[?2004lpacket of size 19 received
+===================
+magic=270
+length=19
+xid=13377331
+version=2
+flags=0x2
+result=0
+port=0
+variable part=cjge227
+===================
+sending response packet of size 20
+packet of size 19 received
+===================
+magic=270
+length=19
+xid=13377331
+version=2
+flags=0x2
+result=0
+port=0
+variable part=cjge227
+===================
+sending response packet of size 20
+packet of size 19 received
+===================
+magic=270
+length=19
+xid=13377331
+version=2
+flags=0x2
+result=0
+port=0
+variable part=cjge227
+===================
+sending response packet of size 20
+^C
+]0;coleg@cole-pc:~/Documents/git/CS270/proj3[?2004h[01;32m[coleg@cole-pc[01;37m proj3[01;32m]$[00m exit
+[?2004lexit
+
+Script done on 2021-04-19 16:06:23-04:00 [COMMAND_EXIT_CODE="130"]

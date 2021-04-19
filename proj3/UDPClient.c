@@ -42,6 +42,7 @@ sighandler_t setSignalHandler(int signum, sighandler_t sighandler) {
 
 void printPacket(char msgBuffer[MAXMSGLEN]){
     header_t *msgptr = (header_t *) msgBuffer;
+    printf("===================\n");
     printf("magic=%d\n", ntohs(msgptr->magic));
     printf("length=%d\n", ntohs(msgptr->length));
     printf("xid=%x\n", msgptr->xactionid);
@@ -54,6 +55,7 @@ void printPacket(char msgBuffer[MAXMSGLEN]){
         printf("%c", msgBuffer[i]);
     }
     printf("\n");
+    printf("===================\n");
 }
 
 int main(int argc, char *argv[]) {
