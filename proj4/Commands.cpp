@@ -31,14 +31,13 @@ void Commands::listVariables(vector<string> tokens, Variables &variables) {
 
 void Commands::unsetVariable(vector<string> tokens, Variables &variables) {
     if (isNumArgsValid(tokens, 2)) {
-        string varName = tokens[0];
+        string varName = tokens[1];
         variables.unset(varName);
     } else {
         printSyntaxError("unset a variable? (unset FOO)");
     }
 }
 
-// TODO test edge case where parameter could have originally had a space in it (ls "/etc/test 2/"). Will this work?
 void Commands::executeProgram(vector<string> tokens, Variables &variables) {
     if (tokens.size() >= 2) {
         string program = tokens[1];
@@ -63,14 +62,6 @@ void Commands::executeProgram(vector<string> tokens, Variables &variables) {
             }
         }
 
-
-//        auto envVars = variables.getEnv();
-//        vector<char*> argv(envVars.size() + 1);    // one extra for the null
-//
-//        for (size_t i = 0; i != envVars.size(); ++i)
-//        {
-//            argv[i] = &envVars[i][0];
-//        }
         auto envVars = variables.getEnv();
 
         // all the good stuff should be parsed by now
@@ -78,7 +69,6 @@ void Commands::executeProgram(vector<string> tokens, Variables &variables) {
         if (pid == 0) {
             // child code, run process
             int inFile, outFile;
-            // TODO execute program
             if (!infrom.empty()) {
                 inFile = open(infrom.c_str(), O_RDONLY);
                 dup2(inFile, STDIN_FILENO);
@@ -151,7 +141,7 @@ void Commands::printSyntaxError(const string &errorEnd) {
 
 bool Commands::handleCommand(vector<string> &tokens, Variables &variables) {
     string command = tokens[0];
-    void (Commands::*commandFunc)(vector<string> tokens, Variables &variables);
+    void (*commandFunc)(vector<string> tokens, Variables &variables);
     if (command == "quit") {
         // quit
         return true;
@@ -175,7 +165,7 @@ bool Commands::handleCommand(vector<string> &tokens, Variables &variables) {
         cout << command << ": command not found" << endl;
         return false;
     }
-    (this->*commandFunc)(tokens, variables);
+    (*commandFunc)(tokens, variables);
     return false;
 }
 

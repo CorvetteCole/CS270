@@ -13,11 +13,11 @@ using namespace std;
 class Commands {
 private:
     // command functions
-    void setVariable(vector<string> tokens, Variables &variables);
-    void listVariables(vector<string> tokens, Variables &variables);
-    void unsetVariable(vector<string> tokens, Variables &variables);
-    void executeProgram(vector<string> tokens, Variables &variables);
-    void changeDirectory(vector<string> tokens, Variables &variables);
+    static void setVariable(vector<string> tokens, Variables &variables);
+    static void listVariables(vector<string> tokens, Variables &variables);
+    static void unsetVariable(vector<string> tokens, Variables &variables);
+    static void executeProgram(vector<string> tokens, Variables &variables);
+    static void changeDirectory(vector<string> tokens, Variables &variables);
 
     // utility methods
     static string getCurrentDirectory();
@@ -27,7 +27,7 @@ public:
     Commands() = default;
 
     // handle commands, redirect in to subroutines. Return true if request quit
-    bool handleCommand(vector<string>& tokens, Variables & variables);
+    static bool handleCommand(vector<string>& tokens, Variables & variables);
 };
 
 

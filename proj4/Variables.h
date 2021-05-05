@@ -18,8 +18,6 @@ private:
     map<string, string> variables;
     string dirVar;
 
-
-
     static bool isVarNameValid(string varName);
     bool isSysVar(const string& varName);
 
@@ -36,25 +34,7 @@ public:
 
     string get(const string& varName);
 
-    vector<string> getEnv(){
-        vector<string> env;
-        for (const auto& var : variables){
-            string envVar = var.first;
-            string varValue = var.second;
-            if (varValue.find(' ') != string::npos){
-                // spaces in varVale, we will need to wrap in quotes
-                varValue.insert(varValue.begin(), '"');
-                varValue.insert(varValue.end(), '"');
-                cout << "juice" << endl;
-            }
-            envVar.append("=");
-            envVar.append(varValue);
-            env.push_back(envVar);
-        }
-        return env;
-    }
-
-
+    vector<string> getEnv();
 };
 
 

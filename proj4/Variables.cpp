@@ -24,7 +24,7 @@ bool Variables::isVarNameValid(string varName) {
 bool Variables::isSysVar(const string &varName) {
     for (const auto &sysVarName : sysVarNames) {
         if (sysVarName == varName) {
-            cout << sysVarName << "Invalid variable name; $" << sysVarName << " is a system variable" << endl;
+            cout << "Invalid variable name; $" << sysVarName << " is a system variable" << endl;
             return true;
         }
     }
@@ -57,7 +57,11 @@ void Variables::set(const string &varName, const string &varValue, bool dir) {
 
 void Variables::unset(const string &varName) {
     if (isVarNameValid(varName) && !isSysVar(varName)) {
-        variables.erase(varName);
+        if (this->has(varName)) {
+            variables.erase(varName);
+        } else {
+            cout << "Invalid variable name $" << varName << "; can't unset a variable that does not exist" << endl;
+        }
     }
 }
 
@@ -69,4 +73,23 @@ void Variables::list() {
 
 bool Variables::has(const string &varName) {
     return variables.find(varName) != variables.end();
+}
+
+vector<string> Variables::getEnv() {
+    vector<string> env;
+    for (const auto &var : variables) {
+        string envVar = var.first;
+        string varValue = var.second;
+        if (varValue.find(' ') != string::npos) {
+            // spaces in varVale, we will need to wrap in quotes
+            varValue.insert(varValue.begin(), '"');
+            varValue.insert(varValue.end(), '"');
+            cout << "juice" << endl;
+        }
+        envVar.append("=");
+        envVar.append(varValue);
+        env.push_back(envVar);
+    }
+    return env;
+
 }

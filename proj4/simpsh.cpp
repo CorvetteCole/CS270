@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
 #include <climits>
 #include "Variables.h"
 #include "Commands.h"
@@ -29,16 +30,13 @@ vector<string> tokenize(string input) {
 }
 
 
-
-
 // takes a vector of tokens and replaces Variables with variable values
 // returns false if a token has an invalid variable
 bool parseTokenVars(vector<string> &tokens, Variables &variables) {
     for (auto &token : tokens) {
         if (token[0] == '$') {
-            //string varName = token.substr(1);
 
-            // TODO this code kind of sucks we should rewrite it
+            // TODO this code is a little convoluted and could use a rewrite
             vector<string> varNames;
             string varName;
             // for character in token string
@@ -48,10 +46,6 @@ bool parseTokenVars(vector<string> &tokens, Variables &variables) {
                 } else if (ch == '$'){
                     if (varName.empty()) {
                         varName.push_back(ch);
-                    } else {
-                        // TODO test and remove
-                        cout << "varName string not empty (impossible)" << endl;
-                        return -1;
                     }
                 } else {
                     if (!varName.empty()){
@@ -64,18 +58,13 @@ bool parseTokenVars(vector<string> &tokens, Variables &variables) {
                 varNames.push_back(varName);
             }
 
-//            cout << "varNames" << endl;
-//            for (auto varNameT : varNames){
-//                cout << varNameT << endl;
-//            }
 
-            // TODO at least rename this
-            for (const auto& varNameE : varNames){
-                if (variables.has(varNameE.substr(1))) {
-                    auto iter = token.find(varNameE);
-                    token.replace(iter, varNameE.length(), variables.get(varNameE.substr(1)));
+            for (const auto& finalVarName : varNames){
+                if (variables.has(finalVarName.substr(1))) {
+                    auto iter = token.find(finalVarName);
+                    token.replace(iter, finalVarName.length(), variables.get(finalVarName.substr(1)));
                 } else {
-                    cout << "Syntax error, variable " << varNameE << " does not exist!" << endl;
+                    cout << "Syntax error, variable " << finalVarName << " does not exist!" << endl;
                     return false;
                 }
             }
@@ -98,31 +87,51 @@ map<string, string> generateSysVarMap(){
     return sysVariables;
 }
 
+void handleSigInt(int sigNum){
+    //signal(SIGINT, handleSigInt); // reset signal handler
+}
+
+sighandler_t setSignalHandler(int signum, sighandler_t sighandler) {
+    struct sigaction action, old_action;
+    action.sa_handler = sighandler;
+    sigemptyset(&action.sa_mask); /* Block sigs of type being handled */
+    action.sa_flags = SA_RESTART; /* Restart syscallsif possible */
+    if (sigaction(signum, &action, &old_action) < 0) {
+        cout << "Signal error" << endl;
+        exit(-1);
+    }
+    return (old_action.sa_handler);
+}
+
 int main() {
     Variables shellVars = Variables(generateSysVarMap(), "CWD");
     Commands shellCmds = Commands();
     //testTokenizer();
 
-
     bool quit = false;
-    do {
-        cout << shellVars.get("PS");
-        string input;
-        getline(cin, input);
+    string input;
+
+    setSignalHandler(SIGINT, handleSigInt);
+
+    cout << shellVars.get("PS");
+    while (!quit && getline(cin, input)) {
+
+
         vector<string> tokens = tokenize(input);
 
-        // TODO remove for prod
-//        for (const auto &token : tokens) {
-//            cout << token << endl;
-//        }
 
         // only try to run a command if we can parse token vars
-        if (parseTokenVars(tokens, shellVars)) {
-            quit = shellCmds.handleCommand(tokens, shellVars);
+        if (parseTokenVars(tokens, shellVars) && !tokens.empty()) {
+            quit = Commands::handleCommand(tokens, shellVars);
             //quit = handleCommand(tokens, shellVars);
         }
 
-    } while (!quit);
+        if (!quit) {
+            cout << shellVars.get("PS");
+        }
+    }
+
+    cout << endl;
 
 
     //std::cout << "Hello, World!" << std::endl;
